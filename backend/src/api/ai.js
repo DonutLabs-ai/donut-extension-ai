@@ -6,7 +6,7 @@ const { generateClippySuggestions } = require('../services/ai/clippy');
 
 /**
  * @route   POST /api/ai/command/complete
- * @desc    Get AI-powered command suggestions
+ * @desc    Get AI-powered command suggestion
  * @access  Private
  */
 router.post('/command/complete', async (req, res) => {
@@ -17,11 +17,11 @@ router.post('/command/complete', async (req, res) => {
       return res.status(400).json({ message: 'Input is required' });
     }
     
-    const suggestions = await generateCompletions(input, history, context);
-    res.json({ suggestions });
+    const command = await generateCompletions(input, history, context);
+    res.json({ command });
   } catch (error) {
-    console.error('Error generating command completions:', error);
-    res.status(500).json({ message: 'Error generating suggestions', error: error.message });
+    console.error('Error generating command completion:', error);
+    res.status(500).json({ message: 'Error generating command', error: error.message });
   }
 });
 

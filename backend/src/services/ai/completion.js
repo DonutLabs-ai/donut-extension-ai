@@ -26,39 +26,48 @@ const COMMON_COMMANDS = [
  * 
  * @private
  * @param {string} input - User input
- * @returns {Array} Matched commands
+ * @returns {string} Most relevant command
  */
 function fallbackCompletions(input) {
-  return COMMON_COMMANDS.filter(cmd => 
+  const matches = COMMON_COMMANDS.filter(cmd => 
     cmd.command.toLowerCase().includes(input.toLowerCase())
   );
+  
+  // Return the first matching command or a default message
+  return matches.length > 0 ? matches[0].command : `${input} [command incomplete]`;
 }
 
 /**
- * Generate command completions based on user input and context
+ * Generate a complete command based on user input and context
  * 
  * @async
- * @param {Object} params - Parameters object
- * @param {string} params.input - User's current input text
- * @param {Array} [params.history=[]] - Previous commands issued by user
- * @param {Object} [params.context={}] - Additional context from frontend
- * @param {Array} [params.context.recentTransactions] - Recent successful transactions
- * @param {Object} [params.context.walletBalances] - Token balances in user's wallet
- * @param {Array} [params.context.trendingTokens] - Currently trending tokens
- * @param {string} [params.context.currentPage] - Page user is currently on
- * @param {Array} [params.context.favoriteTokens] - User's saved favorite tokens
- * @returns {Promise<Array>} Suggested commands array with format [{command: string, description: string}]
+ * @param {string} input - User's current input text
+ * @param {Array} [history=[]] - Previous commands issued by user
+ * @param {Object} [context={}] - Additional context from frontend
+ * @param {Array} [context.recentTransactions] - Recent successful transactions
+ * @param {Object} [context.walletBalances] - Token balances in user's wallet
+ * @param {Array} [context.trendingTokens] - Currently trending tokens
+ * @param {string} [context.currentPage] - Page user is currently on
+ * @param {Array} [context.favoriteTokens] - User's saved favorite tokens
+ * @returns {Promise<string>} A complete command string based on the user's input and context
  */
-const generateCompletions = async ({ input, history = [], context = {} }) => {
+const generateCompletions = async (input, history = [], context = {}) => {
   try {
     // Use the modular LLM service with prompts from the library
-    return await callLLM({
+    const result = await callLLM({
       systemPrompt: commandCompletion.system,
       userPrompt: commandCompletion.user(input, history, context),
       options: {
         parseJson: true
       }
     });
+    
+    // Return just the command string from the first suggestion
+    if (Array.isArray(result) && result.length > 0) {
+      return result[0].command;
+    } else {
+      return fallbackCompletions(input);
+    }
   } catch (error) {
     console.error("LLM API error:", error);
     return fallbackCompletions(input);

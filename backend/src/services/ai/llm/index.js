@@ -22,7 +22,7 @@ const openai = new OpenAI({
  * @param {string} params.systemPrompt - Instructions for the AI model
  * @param {string} params.userPrompt - User query or input
  * @param {Object} [params.options={}] - Additional options
- * @param {string} [params.options.model="gpt-3.5-turbo-instruct"] - Model to use
+ * @param {string} [params.options.model="gpt-4.1-nano"] - Model to use
  * @param {number} [params.options.temperature=0.3] - Randomness of the output (0-1)
  * @param {number} [params.options.maxTokens=250] - Maximum tokens in response
  * @param {boolean} [params.options.parseJson=false] - Whether to parse response as JSON
@@ -36,7 +36,7 @@ async function callLLM({
   options = {} 
 }) {
   const {
-    model = "gpt-3.5-turbo-instruct",
+    model = "gpt-4.1-nano",
     temperature = 0.3,
     maxTokens = 250,
     parseJson = false,

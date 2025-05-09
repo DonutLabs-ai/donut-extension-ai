@@ -10,9 +10,11 @@ const commandCompletion = {
   /**
    * System prompt for command suggestions
    */
-  system: `You are an AI assistant that suggests crypto commands based on user input.
-Generate 3-5 relevant command suggestions in JSON format. Each suggestion should have a 'command' and 'description' field.
-Only respond with valid JSON array without explanations or markdown. Focus on commands that are relevant to the input and context.`,
+  system: `You are an AI assistant that completes crypto commands based on user input and context.
+Generate ONE complete, executable command based on the input and context provided. 
+The command should be a full instruction that can be executed without further input.
+Only respond with a valid JSON array containing a single object with 'command' and 'description' fields.
+Do not provide explanations or markdown formatting, just the JSON array.`,
 
   /**
    * User prompt template for command suggestions
@@ -21,7 +23,7 @@ Only respond with valid JSON array without explanations or markdown. Focus on co
    * @param {Object} context - Contextual data
    * @returns {string} Formatted user prompt
    */
-  user: (input, history, context) => `Generate command suggestions for input: "${input}"
+  user: (input, history, context) => `Complete this command: "${input}"
         
 Context information:
 ${context.recentTransactions ? `Recent transactions: ${JSON.stringify(context.recentTransactions)}` : ''}
@@ -32,7 +34,9 @@ ${context.favoriteTokens ? `Favorite tokens: ${JSON.stringify(context.favoriteTo
 
 Recent command history: ${JSON.stringify(history)}
 
-Respond only with an array of command suggestions in JSON format.`
+I need ONE complete command that the user can run based on the partial input and context provided.
+For example, if input is "/swap" and user has ETH and USDC in wallet, you might suggest: "swap 0.1 ETH USDC".
+Respond only with an array containing a single command suggestion in JSON format.`
 };
 
 /**
