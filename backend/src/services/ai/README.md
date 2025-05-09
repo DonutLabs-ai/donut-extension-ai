@@ -16,38 +16,28 @@ services/ai/
 
 ## Command Completion Service
 
-The Command Completion Service provides AI-powered suggestions for crypto commands based on user input and contextual data.
+The Command Completion Service provides AI-powered command completion based on user input and contextual data.
 
-### `generateCompletions(params)`
+### `generateCompletions(input, history, context)`
 
-Generates command suggestions based on user input and contextual information.
+Generates a complete command based on user input and contextual information.
 
 #### Parameters
 
 | Parameter | Type | Description | Required |
 |-----------|------|-------------|----------|
-| `params.input` | `string` | User's current input text | Yes |
-| `params.history` | `Array` | Previous commands issued by user | No |
-| `params.context` | `Object` | Additional context from frontend | No |
-| `params.context.recentTransactions` | `Array` | Recent successful transactions | No |
-| `params.context.walletBalances` | `Object` | Token balances in user's wallet | No |
-| `params.context.trendingTokens` | `Array` | Currently trending tokens | No |
-| `params.context.currentPage` | `string` | Page user is currently on | No |
-| `params.context.favoriteTokens` | `Array` | User's saved favorite tokens | No |
+| `input` | `string` | User's current input text | Yes |
+| `history` | `Array` | Previous commands issued by user | No |
+| `context` | `Object` | Additional context from frontend | No |
+| `context.recentTransactions` | `Array` | Recent successful transactions | No |
+| `context.walletBalances` | `Object` | Token balances in user's wallet | No |
+| `context.trendingTokens` | `Array` | Currently trending tokens | No |
+| `context.currentPage` | `string` | Page user is currently on | No |
+| `context.favoriteTokens` | `Array` | User's saved favorite tokens | No |
 
 #### Returns
 
-`Promise<Array>`: Array of command suggestion objects with the following structure:
-
-```javascript
-[
-  { 
-    command: "swap ETH USDC", 
-    description: "Swap ETH for USDC" 
-  },
-  // More suggestions...
-]
-```
+`Promise<string>`: A complete command string based on the user's input and context.
 
 #### Example Usage
 
@@ -61,23 +51,45 @@ async function handleCompletions(req, res) {
     const history = req.body.history || [];
     const context = req.body.context || {};
     
-    const suggestions = await generateCompletions({
+    const command = await generateCompletions(
       input,
       history,
-      context: {
-        recentTransactions: context.recentTransactions,
-        walletBalances: context.walletBalances,
-        trendingTokens: context.trendingTokens,
-        currentPage: context.currentPage,
-        favoriteTokens: context.favoriteTokens
-      }
-    });
+      context
+    );
     
-    res.json({ suggestions });
+    res.json({ command });
   } catch (error) {
     console.error('Completion error:', error);
-    res.status(500).json({ error: 'Failed to generate suggestions' });
+    res.status(500).json({ error: 'Failed to generate command' });
   }
+}
+```
+
+#### API Example
+
+**Request:**
+
+```bash
+curl -X POST http://localhost:3000/api/ai/command/complete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "/swap",
+    "history": ["price ETH", "chart BTC"],
+    "context": {
+      "walletBalances": {
+        "ETH": "1.5",
+        "USDC": "2500"
+      },
+      "currentPage": "wallet"
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "command": "swap 0.1 ETH USDC"
 }
 ```
 
@@ -96,7 +108,7 @@ Calls the language model with customizable prompts and options.
 | `params.systemPrompt` | `string` | Instructions for the AI model | Yes |
 | `params.userPrompt` | `string` | User query or input | Yes |
 | `params.options` | `Object` | Additional options | No |
-| `params.options.model` | `string` | Model to use (default: "gpt-3.5-turbo-instruct") | No |
+| `params.options.model` | `string` | Model to use (default: "gpt-4.1-nano") | No |
 | `params.options.temperature` | `number` | Randomness (0-1, default: 0.3) | No |
 | `params.options.maxTokens` | `number` | Max tokens in response (default: 250) | No |
 | `params.options.parseJson` | `boolean` | Auto-parse response as JSON (default: false) | No |
@@ -164,7 +176,7 @@ async function extractEntities(text) {
 
 ## Implementation Notes
 
-- The service uses OpenAI's GPT-3.5-turbo-instruct model for quick and efficient completions
+- The service uses OpenAI's GPT-4.1-nano model for quick and efficient completions
 - Configuration requires environment variables:
   - `OPENAI_API_KEY`: Your OpenAI API key
   - `OPENAI_API_BASE`: API base URL (defaults to 'https://api.openai.com/v1' if not specified)
