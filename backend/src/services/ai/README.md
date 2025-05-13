@@ -14,6 +14,15 @@ services/ai/
 └── README.md       # This documentation
 ```
 
+## Services Overview
+
+The AI services module provides several key AI-powered capabilities:
+
+1. **Command Completion** (`completion.js`): Provides AI-powered command suggestions based on user input.
+2. **Entity Recognition** (`entity.js`): Identifies crypto entities like tokens, addresses, and amounts in text.
+3. **Clippy Assistant** (`clippy.js`): Generates contextual guidance and suggestions for users.
+4. **MCP Integration** (`mcp.js`): Processes natural language and finds the appropriate MCP command to execute.
+
 ## Command Completion Service
 
 The Command Completion Service provides AI-powered command completion based on user input and contextual data.
@@ -187,3 +196,35 @@ async function extractEntities(text) {
   ```
 - Includes fallback mechanism for when the API is unavailable
 - Optimized for response speed with a low temperature setting and limited token output 
+
+## MCP Integration Service
+
+The MCP integration service (`mcp.js`) connects natural language processing with the Model Context Protocol (MCP) to execute Solana-related commands.
+
+### Features
+
+- Analyzes natural language queries to determine user intent
+- Matches queries to available MCP tools
+- Selects and executes the appropriate tool with the correct arguments
+- Returns tool execution results to the user
+
+### Usage
+
+```javascript
+const { processQuery } = require('./services/ai/mcp');
+
+// Process a natural language query
+const result = await processQuery(
+  "What's the current price of Solana?", 
+  "https://solana-agent-mcp-server.charlesferrell.workers.dev/sse"
+);
+
+// Result object contains:
+// {
+//   success: true,
+//   tool: "FETCH_PRICE",
+//   arguments: { tokenAddress: "So11111111111111111111111111111111111111112" },
+//   confidence: 0.95,
+//   result: { content: [{ type: "text", text: "..." }] }
+// }
+``` 

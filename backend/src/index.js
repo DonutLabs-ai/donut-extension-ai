@@ -6,6 +6,7 @@ const morgan = require('morgan');
 
 // Import routes
 const aiRoutes = require('./api/ai');
+const mcpRoutes = require('./api/mcp');
 
 // Initialize express app
 const app = express();
@@ -21,6 +22,7 @@ app.use(morgan('dev')); // Logging
 
 // Routes
 app.use('/api/ai', aiRoutes);
+app.use('/api/mcp', mcpRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -35,6 +37,26 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
+
+// Graceful shutdown handling
+const gracefulShutdown = () => {
+  console.log('Shutting down gracefully...');
+  
+  // Close MCP connections
+  try {
+    const mcpService = require('./services/mcp');
+    mcpService.closeAllConnections();
+  } catch (error) {
+    console.error('Error closing MCP connections:', error);
+  }
+  
+  // Exit the process
+  process.exit(0);
+};
+
+// Listen for termination signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 // Start server
 app.listen(PORT, () => {
