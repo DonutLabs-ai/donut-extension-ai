@@ -3,14 +3,33 @@
  * @module services/ai/llm
  */
 
-const { OpenAI } = require('openai');
+import OpenAI from 'openai';
+
+interface LLMCallOptions {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  parseJson?: boolean;
+  responseProcessor?: (content: string) => any;
+}
+
+interface LLMCallParams {
+  systemPrompt: string;
+  userPrompt: string;
+  options?: LLMCallOptions;
+}
+
+// 检查API密钥并提供友好错误信息
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('警告: OPENAI_API_KEY环境变量未设置。请在.env文件中添加您的API密钥。');
+}
 
 /**
  * OpenAI client configuration
  * @private
  */
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'dummy-key-for-initialization',
   baseURL: process.env.OPENAI_API_BASE || 'https://api.openai.com/v1',
 });
 
@@ -30,11 +49,16 @@ const openai = new OpenAI({
  * @returns {Promise<any>} The processed response from the LLM
  * @throws {Error} When API call fails or response processing fails
  */
-async function callLLM({ 
+export async function callLLM({ 
   systemPrompt, 
   userPrompt, 
   options = {} 
-}) {
+}: LLMCallParams): Promise<any> {
+  // 在调用时重新检查API密钥
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'dummy-key-for-initialization') {
+    throw new Error('OPENAI_API_KEY未设置。请在.env文件中配置有效的API密钥。');
+  }
+
   const {
     model = "gpt-4.1-nano",
     temperature = 0.3,
@@ -60,7 +84,7 @@ async function callLLM({
       max_tokens: maxTokens,
     });
 
-    const content = response.choices[0].message.content.trim();
+    const content = response.choices[0].message.content?.trim() || '';
     
     // Process the response based on options
     if (responseProcessor && typeof responseProcessor === 'function') {
@@ -78,8 +102,4 @@ async function callLLM({
     // Re-throw other errors
     throw error;
   }
-}
-
-module.exports = {
-  callLLM
-}; 
+} 

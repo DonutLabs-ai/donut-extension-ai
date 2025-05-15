@@ -2,17 +2,19 @@
  * MCP Server API Routes
  * Handles MCP-related endpoints including natural language command processing
  */
-const express = require('express');
+import express, { Request, Response } from 'express';
+import * as mcpService from '../services/mcp/index.js';
+import { processQuery } from '../services/ai/mcp.js';
+import { McpQueryRequest, McpToolRequest, ApiResponse } from '../types/index.js';
+
 const router = express.Router();
-const mcpService = require('../services/mcp');
-const { processQuery } = require('../services/ai/mcp');
 
 /**
  * @route   POST /api/mcp/process
  * @desc    Process natural language query and execute appropriate MCP command
  * @access  Private
  */
-router.post('/process', async (req, res) => {
+router.post('/process', async (req: Request<{}, {}, McpQueryRequest>, res: Response) => {
   try {
     const { query } = req.body;
     
@@ -30,11 +32,15 @@ router.post('/process', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error processing MCP query:', error);
-    res.status(500).json({ 
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    const response: ApiResponse<null> = {
       success: false,
       message: 'Error processing MCP query',
-      error: error.message
-    });
+      error: errorMessage
+    };
+    
+    res.status(500).json(response);
   }
 });
 
@@ -43,7 +49,7 @@ router.post('/process', async (req, res) => {
  * @desc    List available tools from the MCP server
  * @access  Private
  */
-router.get('/tools', async (req, res) => {
+router.get('/tools', async (req: Request, res: Response) => {
   try {
     // Get MCP server URL from environment variables
     const serverUrl = process.env.MCP_SERVER_URL;
@@ -55,9 +61,11 @@ router.get('/tools', async (req, res) => {
     res.json({ tools });
   } catch (error) {
     console.error('Error listing MCP tools:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     res.status(500).json({ 
       message: 'Error listing MCP tools',
-      error: error.message
+      error: errorMessage
     });
   }
 });
@@ -67,9 +75,9 @@ router.get('/tools', async (req, res) => {
  * @desc    Call a specific tool on the MCP server directly
  * @access  Private
  */
-router.post('/tool', async (req, res) => {
+router.post('/tool', async (req: Request<{}, {}, McpToolRequest>, res: Response) => {
   try {
-    const { name, arguments } = req.body;
+    const { name, arguments: args } = req.body;
     
     if (!name) {
       return res.status(400).json({ message: 'Tool name is required' });
@@ -81,15 +89,17 @@ router.post('/tool', async (req, res) => {
       return res.status(500).json({ message: 'MCP server URL not configured' });
     }
     
-    const result = await mcpService.callTool(serverUrl, name, arguments || {});
+    const result = await mcpService.callTool(serverUrl, name, args || {});
     res.json({ result });
   } catch (error) {
     console.error('Error calling MCP tool:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     res.status(500).json({ 
       message: 'Error calling MCP tool',
-      error: error.message
+      error: errorMessage
     });
   }
 });
 
-module.exports = router; 
+export default router; 

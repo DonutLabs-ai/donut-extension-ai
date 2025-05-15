@@ -3,11 +3,12 @@
  * @module services/mcp
  */
 
-const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
-const { SSEClientTransport } = require('@modelcontextprotocol/sdk/client/sse.js');
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { McpToolRequest, McpClient } from '../../types/index.js';
 
 // Cache for connected clients to avoid reconnecting for every request
-const clientCache = new Map();
+const clientCache = new Map<string, Client>();
 
 /**
  * Get or create an MCP client with a connection to the specified server
@@ -17,10 +18,10 @@ const clientCache = new Map();
  * @returns {Promise<Client>} Connected MCP client
  * @throws {Error} When connection fails
  */
-const getClient = async (serverUrl) => {
+export const getClient = async (serverUrl: string): Promise<Client> => {
   // If we already have a connected client for this URL, return it
   if (clientCache.has(serverUrl)) {
-    return clientCache.get(serverUrl);
+    return clientCache.get(serverUrl) as Client;
   }
   
   try {
@@ -42,8 +43,9 @@ const getClient = async (serverUrl) => {
     console.log(`Connected to MCP server at ${serverUrl}`);
     return client;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Failed to connect to MCP server at ${serverUrl}:`, error);
-    throw new Error(`Failed to connect to MCP server: ${error.message}`);
+    throw new Error(`Failed to connect to MCP server: ${errorMessage}`);
   }
 };
 
@@ -54,7 +56,7 @@ const getClient = async (serverUrl) => {
  * @param {string} serverUrl - URL of the MCP server
  * @returns {Promise<Array>} List of available tools
  */
-const listTools = async (serverUrl) => {
+export const listTools = async (serverUrl: string): Promise<any[]> => {
   const client = await getClient(serverUrl);
   const tools = await client.listTools();
   return tools;
@@ -69,7 +71,7 @@ const listTools = async (serverUrl) => {
  * @param {Object} args - Arguments to pass to the tool
  * @returns {Promise<Object>} Result of the tool call
  */
-const callTool = async (serverUrl, toolName, args) => {
+export const callTool = async (serverUrl: string, toolName: string, args: Record<string, any>): Promise<any> => {
   const client = await getClient(serverUrl);
   const result = await client.callTool({
     name: toolName,
@@ -85,7 +87,7 @@ const callTool = async (serverUrl, toolName, args) => {
  * @param {string} serverUrl - URL of the MCP server
  * @returns {Promise<Array>} List of available resources
  */
-const listResources = async (serverUrl) => {
+export const listResources = async (serverUrl: string): Promise<any[]> => {
   const client = await getClient(serverUrl);
   const resources = await client.listResources();
   return resources;
@@ -99,7 +101,7 @@ const listResources = async (serverUrl) => {
  * @param {string} uri - URI of the resource to read
  * @returns {Promise<Object>} Resource data
  */
-const readResource = async (serverUrl, uri) => {
+export const readResource = async (serverUrl: string, uri: string): Promise<any> => {
   const client = await getClient(serverUrl);
   const resource = await client.readResource({ uri });
   return resource;
@@ -109,7 +111,7 @@ const readResource = async (serverUrl, uri) => {
  * Close all MCP client connections
  * This should be called when shutting down the server
  */
-const closeAllConnections = () => {
+export const closeAllConnections = (): void => {
   for (const [url, client] of clientCache.entries()) {
     try {
       client.close();
@@ -119,13 +121,4 @@ const closeAllConnections = () => {
     }
   }
   clientCache.clear();
-};
-
-module.exports = {
-  getClient,
-  listTools,
-  callTool,
-  listResources,
-  readResource,
-  closeAllConnections
 }; 

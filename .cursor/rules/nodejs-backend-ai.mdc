@@ -1,0 +1,57 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Node.js Backend with AI Features for Donut Extension
+
+## Overview
+This rule provides guidance for implementing the Node.js backend with AI features for the Donut extension MVP as outlined in [MVP Sprint.md](mdc:MVP Sprint.md).
+
+## Key Backend Components
+
+### AI Auto-completion Backend (P0.5)
+As described in Section 6 of the MVP Sprint document:
+- Implement API interface to receive context (input text, history, page info, wallet information)
+- Use LangChain/LlamaIndex with LLM (OpenAI/Claude) to generate smart command suggestions
+- Merge local and backend suggestions for command bar
+
+### Clippy AI Assistant Backend
+Supporting the P0 Clippy Assistant framework (Section 8):
+- Rule engine for matching user behavior
+- Context management for collecting necessary information
+- LLM integration for generating relevant command suggestions
+- Memory module for maintaining session context
+
+## Implementation Guidelines
+
+### Project Structure
+```
+/backend
+  /src
+    /api           # Express/Fastify routes
+    /services
+      /ai          # AI services (completion, entity recognition)
+      /command     # Command processing logic
+    /models        # Data models
+    /utils         # Utility functions
+  /config          # Configuration files
+  package.json     # Dependencies
+```
+
+### Key Dependencies
+- Express/Fastify for API routes
+- LangChain/LlamaIndex for LLM integration
+- OpenAI/Anthropic SDK for model access
+- MongoDB/Redis for caching and storage
+
+### API Endpoints
+- `POST /api/command/complete` - Get AI-powered command suggestions
+- `POST /api/entity/recognize` - Recognize crypto entities in text
+- `POST /api/clippy/suggest` - Get Clippy suggestions based on context
+
+## Security Considerations
+- Secure API endpoints with authentication
+- Implement rate limiting for LLM API calls
+- Store API keys securely in environment variables
+- Validate all input from the extension

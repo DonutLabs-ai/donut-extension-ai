@@ -4,8 +4,36 @@
  * @module services/ai/mcp
  */
 
-const { callLLM } = require('./llm');
-const mcpService = require('../mcp');
+import { callLLM } from './llm/index.js';
+import * as mcpService from '../mcp/index.js';
+
+interface McpTool {
+  name: string;
+  description?: string;
+  parameters?: {
+    [key: string]: {
+      description?: string;
+      required?: boolean;
+      [key: string]: any;
+    };
+  };
+}
+
+interface McpToolSelection {
+  tool: string | null;
+  arguments?: Record<string, any>;
+  confidence: number;
+  message?: string;
+}
+
+interface McpQueryResult {
+  success: boolean;
+  message?: string;
+  tool?: string;
+  arguments?: Record<string, any>;
+  confidence?: number;
+  result?: any;
+}
 
 /**
  * Prompt templates for MCP command processing
@@ -29,7 +57,7 @@ Only respond with valid JSON, without any explanation or markdown formatting.`,
    * @param {Array} tools - Available MCP tools
    * @returns {string} Formatted user prompt
    */
-  user: (query, tools) => {
+  user: (query: string, tools: McpTool[]): string => {
     const toolDescriptions = tools.map(tool => {
       const params = tool.parameters || {};
       const paramDescriptions = Object.keys(params).map(param => {
@@ -78,7 +106,7 @@ If no tool matches well (confidence < 0.5), respond with:
  * @param {string} serverUrl - URL of the MCP server
  * @returns {Promise<Object>} Result of the MCP command or an error message
  */
-const processQuery = async (query, serverUrl) => {
+export const processQuery = async (query: string, serverUrl: string): Promise<McpQueryResult> => {
   try {
     // Get available tools from the MCP server
     const tools = await mcpService.listTools(serverUrl);
@@ -92,7 +120,7 @@ const processQuery = async (query, serverUrl) => {
         temperature: 0.2,
         maxTokens: 500
       }
-    });
+    }) as McpToolSelection;
     
     // If no tool was selected or confidence is low
     if (!result.tool || result.confidence < 0.5) {
@@ -103,7 +131,7 @@ const processQuery = async (query, serverUrl) => {
     }
     
     // Call the selected tool with the determined arguments
-    const toolResult = await mcpService.callTool(serverUrl, result.tool, result.arguments);
+    const toolResult = await mcpService.callTool(serverUrl, result.tool, result.arguments || {});
     
     return {
       success: true,
@@ -115,13 +143,11 @@ const processQuery = async (query, serverUrl) => {
     
   } catch (error) {
     console.error('Error processing MCP query:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return {
       success: false,
-      message: `Error processing your request: ${error.message}`
+      message: `Error processing your request: ${errorMessage}`
     };
   }
-};
-
-module.exports = {
-  processQuery
 }; 
