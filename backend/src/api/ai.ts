@@ -6,10 +6,32 @@ import { ApiResponse } from '../types/index.js';
 
 const router = express.Router();
 
+interface CommandHistoryItem {
+  id: string;
+  timestamp: number;
+  command: string;
+  commandType: string;
+}
+
+interface TrendingItem {
+  symbol: string;
+  price: string;
+}
+
+interface BalanceItem {
+  symbol: string;
+  balance: string;
+  uiBalance: number;
+  price: string;
+}
+
 interface CommandCompleteRequest {
-  input: string;
-  history?: string[];
-  context?: Record<string, any>;
+  address: string;
+  inputValue: string;
+  history?: CommandHistoryItem[];
+  trending?: TrendingItem[];
+  balance?: BalanceItem[];
+  returnFullCommand?: boolean;
 }
 
 interface EntityRecognizeRequest {
@@ -30,13 +52,25 @@ interface ClippySuggestRequest {
  */
 router.post('/command/complete', async (req: Request<{}, {}, CommandCompleteRequest>, res: Response) => {
   try {
-    const { input, history, context } = req.body;
+    const { inputValue, history, address, trending, balance, returnFullCommand } = req.body;
     
-    if (!input) {
-      return res.status(400).json({ message: 'Input is required' });
+    if (!inputValue) {
+      return res.status(400).json({ message: 'Input value is required' });
     }
     
-    const command = await generateCompletions(input, history, context);
+    // Create a context object with the additional data
+    const context = {
+      address,
+      trending,
+      balance
+    };
+    
+    // Convert history to the format expected by generateCompletions if needed
+    const formattedHistory = history?.map(item => item.command) || [];
+    
+    const command = await generateCompletions(inputValue, formattedHistory, context, {
+      returnFullCommand: returnFullCommand || false
+    });
     res.json({ 
       command,
       success: true 

@@ -25,7 +25,7 @@ const DEFAULT_COMPLETION_OPTIONS: CompletionOptions = {
  * @async
  * @param {string} input - User input to complete
  * @param {string[]} [history] - Previous commands for context
- * @param {object} [context] - Additional context (e.g., current directory)
+ * @param {object} [context] - Additional context (wallet address, trending tokens, balance)
  * @returns {Promise<string>} Generated command completion
  */
 export const generateCompletions = async (
@@ -38,41 +38,64 @@ export const generateCompletions = async (
   const completionOptions = { ...DEFAULT_COMPLETION_OPTIONS, ...options };
   
   // Create a system prompt that instructs the model
-  const systemPrompt = `You are an AI assistant that suggests command completions for a crypto extension.
-Your task is to generate executable slash commands that users can run in the extension.
+  const systemPrompt = `You are an AI assistant for a crypto extension that helps users complete slash commands.
+Your task is to generate executable slash commands based on user input.
 
-All commands must follow these rules:
-1. Always start with a slash (/) character
-2. Be fully executable without vague parameters
-3. Be concise and direct (e.g., "/swap 1 eth to sol")
-4. Use specific values, not placeholders
-5. Avoid explanations or additional text
-6. Only return the command itself, nothing else
+Available commands:
+- /swap [amount] [from-token] [to-token] - Swap tokens (e.g., "/swap 1 sol to usdc")
+- /price [token] - Check token price (e.g., "/price sol")
+- /balance - View wallet balances
+- /send [amount] [token] [to-address] - Send tokens (e.g., "/send 0.1 sol to address")
+- /history [period] - View transaction history (e.g., "/history 7d")
 
-Example valid completions:
-- "/swap 0.5 sol to usdc"
-- "/balance"
-- "/price sol"
-- "/send 0.1 sol to wallet123"
-- "/history 7d"`;
+Your completion must:
+1. Always start with a slash (/)
+2. Be fully executable with specific values
+3. Be concise and direct
+4. Consider user context (wallet balance, trending tokens)
+5. Only include the command itself, no explanations
+
+If the user provides partial input, complete it intelligently based on context.`;
 
   // Create a user prompt that includes input and context
   let userPrompt = `Input: ${input}\n`;
   
   // Add history context if available
   if (history && history.length > 0) {
-    userPrompt += `\nRecent command history:\n${history.join('\n')}\n`;
+    userPrompt += `\nRecent command history:\n${history.slice(0, 5).join('\n')}\n`;
   }
   
   // Add additional context if available
   if (context) {
-    userPrompt += '\nAdditional context:\n';
-    for (const [key, value] of Object.entries(context)) {
-      userPrompt += `${key}: ${value}\n`;
+    // Add wallet address if available
+    if (context.address) {
+      userPrompt += `\nWallet address: ${context.address}`;
+    }
+    
+    // Add user's token balances if available
+    if (context.balance && Array.isArray(context.balance)) {
+      userPrompt += `\n\nUser balances:`;
+      context.balance.forEach((item: any) => {
+        // Convert price from string to number for formatting or handle it as string
+        const priceDisplay = item.price && item.price !== "0" ? 
+          `$${parseFloat(item.price).toFixed(2)}` : 'price unknown';
+        userPrompt += `\n- ${item.symbol}: ${item.uiBalance} (${priceDisplay})`;
+      });
+    }
+    
+    // Add trending tokens if available
+    if (context.trending && Array.isArray(context.trending)) {
+      userPrompt += `\n\nTrending tokens:`;
+      context.trending.forEach((item: any) => {
+        // Convert price from string to number for formatting or handle it as string
+        const priceDisplay = item.price && item.price !== "0" ? 
+          ` ($${parseFloat(item.price).toFixed(2)})` : '';
+        userPrompt += `\n- ${item.symbol}${priceDisplay}`;
+      });
     }
   }
   
-  userPrompt += '\nComplete the command (must start with /):';
+  userPrompt += '\n\nComplete the command:';
   
   // Call the language model
   const result = await callLLM({

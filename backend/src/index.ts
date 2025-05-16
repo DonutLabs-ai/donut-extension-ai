@@ -31,9 +31,24 @@ const app: Express = express();
 const PORT: number = parseInt(process.env.PORT || '3000', 10);
 
 // Middleware
-app.use(helmet()); // Security headers
+app.use(helmet({ 
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+})); // Security headers, disable CSP for Vercel
+
+// 添加请求超时处理
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // 设置请求超时时间为30秒
+  req.setTimeout(30000);
+  // 确保响应有明确的Content-Type
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*'
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json()); // Parse JSON request body
 app.use(morgan('dev')); // Logging
@@ -42,9 +57,31 @@ app.use(morgan('dev')); // Logging
 app.use('/api/ai', aiRoutes);
 app.use('/api/mcp', mcpRoutes);
 
+// Root endpoint - redirect to health or show API info
+app.get('/', (req: Request, res: Response) => {
+  res.status(200).json({ 
+    message: 'Donut Extension API Server',
+    version: '0.1.0',
+    endpoints: {
+      health: '/health',
+      ai: '/api/ai/*',
+      mcp: '/api/mcp/*'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  // 确保设置完整的响应头
+  res.setHeader('Connection', 'close');
+  res.setHeader('Cache-Control', 'no-cache, no-store');
+  
+  // 立即响应，不依赖任何异步操作
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // Error handling middleware
@@ -78,9 +115,12 @@ const gracefulShutdown = (): void => {
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-});
+// Only start the server if not being imported (used in development)
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  });
+}
 
+// Export for Vercel
 export default app; 
